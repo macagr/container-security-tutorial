@@ -1,28 +1,17 @@
 #!/usr/bin/env bash
-# setup/02-cgroup-mode.sh — inspect or change the machine's cgroup world.
-# Terminal: host (A). Read-only by default; --set-v1 / --set-v2 need sudo + reboot.
+# setup/02-cgroup-mode.sh — read-only explainer for this (cgroup v2) branch.
+# Terminal: host (A). No flags, no changes, no reboot: v2 is the default
+# boot mode on modern distributions, so this branch needs no toggle.
 #
-# WHY THIS EXISTS (the core design decision of the lab):
-#   release_agent is a cgroup v1 feature. Modern Ubuntu boots unified cgroup v2
-#   where the file simply does not exist. Act 3 wants BOTH behaviors:
-#     - success on v1  (attendees see the escape work)
-#     - death on v2    (the modern lesson — and timely: k8s is migrating to v2)
-#   Since the mode is chosen at BOOT via the kernel cmdline, switching is a
-#   grub edit + reboot. This script does that safely and reversibly.
-#
-# Usage:
-#   setup/02-cgroup-mode.sh           # read-only: show current mode + explanation
-#   sudo setup/02-cgroup-mode.sh --set-v1   # boot cgroup v1 next reboot
-#   sudo setup/02-cgroup-mode.sh --set-v2   # restore unified v2 (default)
-#
-# The canonical check attendees memorize (used across the whole lab):
-#   stat -fc %T /sys/fs/cgroup    # tmpfs = v1, cgroup2fs = v2
+# On the v1 branch this script also offered a grub toggle (--set-v1) so
+# the release_agent technique could be seen working before its death.
+# On THIS branch there is nothing to set — v2 is already your world if
+# 00-check passed. This script remains as the reference for:
+#   - which world you are in (and how to check)
+#   - what that means for act1/03 and act3/04
+#   - how a v1 machine would get here (and why it should not bother)
 
 set -euo pipefail
-
-GRUB_FILE=/etc/default/grub
-FLAG="systemd.unified_cgroup_hierarchy=0"
-BACKUP="${GRUB_FILE}.lab-backup"
 
 current_mode() {
     case "$(stat -fc %T /sys/fs/cgroup)" in
@@ -32,54 +21,28 @@ current_mode() {
     esac
 }
 
-show_status() {
-    MODE=$(current_mode)
-    echo "Current cgroup world: v${MODE#v}"
-    case "$MODE" in
-        v1) echo "  release_agent WILL work (act3/04 beat 2 succeeds)" ;;
-        v2) echo "  release_agent WILL FAIL — no release_agent file exists on v2" ;;
-        *)  echo "  cannot determine; check mounts" ;;
-    esac
-    if grep -q -- "$FLAG" "$GRUB_FILE" 2>/dev/null; then
-        echo "  grub config: v1 flag PRESENT in $GRUB_FILE (takes effect at boot)"
-    else
-        echo "  grub config: no v1 flag (default = unified v2)"
-    fi
-}
-
-apply_flag() {   # $1 = add|remove
-    local action="$1"
-    [[ $EUID -eq 0 ]] || { echo "run with sudo for --set-v1/--set-v2"; exit 1; }
-    [[ -f "$BACKUP" ]] || cp "$GRUB_FILE" "$BACKUP"   # one-time backup, never overwritten
-
-    if [[ "$action" == add ]]; then
-        if grep -q -- "$FLAG" "$GRUB_FILE"; then
-            echo "v1 flag already present — nothing to do (reboot to apply if mode shows v2)"
-        else
-            # append to GRUB_CMDLINE_LINUX_DEFAULT, preserving existing content
-            sed -i "s/^\(GRUB_CMDLINE_LINUX_DEFAULT=\".*\)\"/\1 $FLAG\"/" "$GRUB_FILE"
-            grep -q -- "$FLAG" "$GRUB_FILE" || {
-                echo "failed to inject flag; restore with: cp $BACKUP $GRUB_FILE"; exit 1; }
-            echo "cgroup v1 flag added to $GRUB_FILE (backup at $BACKUP)"
-        fi
-    else
-        if grep -q -- "$FLAG" "$GRUB_FILE"; then
-            sed -i "s/ $FLAG//" "$GRUB_FILE"
-            echo "cgroup v1 flag removed — next boot is unified v2 again"
-        else
-            echo "no v1 flag present — already v2-configured"
-        fi
-    fi
-    update-grub
-    echo
-    echo "  REBOOT REQUIRED: the mode is chosen at boot."
-    echo "  After reboot, verify with:  stat -fc %T /sys/fs/cgroup   (want: tmpfs)"
-    echo "  To go back to v2 later:      sudo $0 --set-v2"
-}
-
-case "${1:-}" in
-    --set-v1) apply_flag add ;;
-    --set-v2) apply_flag remove ;;
-    "")       show_status ;;
-    *) echo "usage: $0 [--set-v1|--set-v2]"; exit 2 ;;
+MODE=$(current_mode)
+echo "Current cgroup world: v${MODE#v}"
+echo
+case "$MODE" in
+    v2)
+        echo "  Matches this branch. What this means for the lab:"
+        echo "    act1/03-cgroups.sh       creates cgroups with cgroup.subtree_control,"
+        echo "                             cgroup.procs and memory.max (v2 files)"
+        echo "    act3/04-release_agent.sh  demonstrates the technique's DEATH:"
+        echo "                             the knob does not exist on v2 — and why"
+        ;;
+    v1)
+        echo "  MISMATCH. This branch assumes v2. Two options:"
+        echo "    (a) use the cgroup-v1 branch of this repository (recommended:"
+        echo "        it shows the full success-then-death arc)"
+        echo "    (b) remove the v1 flag from your kernel command line and reboot:"
+        echo "        check /etc/default/grub for systemd.unified_cgroup_hierarchy=0"
+        ;;
+    *)
+        echo "  cannot determine mode; check mounts"
+        ;;
 esac
+echo
+echo "The canonical check, used across the whole lab:"
+echo "    stat -fc %T /sys/fs/cgroup    # tmpfs = v1, cgroup2fs = v2"

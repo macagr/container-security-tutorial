@@ -1,4 +1,4 @@
-# Blowing up containers: lab repository
+# Blowing up containers: lab repository (cgroup v2 branch)
 
 A learning repository for container security: build a container **from
 scratch, without Docker**, then exploit the kernel's usermode helper escape
@@ -6,6 +6,11 @@ hatches, applying one remediation after each escape. Every technique is
 well-documented public knowledge (Trail of Bits, container-security.dev,
 kernel docs); this repo's contribution is structure — the same material as
 a paced, two-terminal, hands-on lab.
+
+This branch targets **cgroup v2** (the modern default on current
+distributions and Kubernetes). On a cgroup v1 machine, use the `cgroup-v1`
+branch: it shows release_agent working before its death. Here, release_agent
+is already extinct, and the lab makes that absence the lesson.
 
 ## Intended audience
 

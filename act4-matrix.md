@@ -10,7 +10,11 @@ implemented; each script's "check question" output feeds a row here.
 | core_pattern   | process dumps core         | /proc/sys/kernel/core_pattern | CAP_SYS_ADMIN (write /proc/sys) | payload at host-visible path | masked/ro /proc/sys | PodSecurity restricted + maskedPaths |
 | uevent_helper  | kernel uevent             | /sys/kernel/uevent_helper     | CAP_SYS_ADMIN (write /sys)      | payload at host-visible path | masked/ro /sys | PodSecurity restricted + maskedPaths |
 | binfmt_misc   | exec of unknown format     | /proc/sys/fs/binfmt_misc/*    | CAP_SYS_ADMIN (register)        | interpreter path in init mnt ns | don't mount binfmt_misc | (no default mount in containers) |
-| release_agent | cgroup becomes empty       | <cgroup v1>/release_agent     | CAP_SYS_ADMIN + writable v1 hierarchy | payload at host-visible path | cgroup v2 (kernel-level) + /sys ro | cgroup v2 default on modern k8s |
+| release_agent | cgroup becomes empty       | <cgroup v1>/release_agent     | CAP_SYS_ADMIN + writable v1 hierarchy | payload at host-visible path | KERNEL REDESIGN: does not exist on cgroup v2 — extinct | v2 default on modern k8s |
+
+> On this branch the release_agent row is closed by kernel redesign. The
+> technique cannot be fired here; the other three rows remain open and are
+> yours to remediate per pod.
 
 ## Reading the matrix
 

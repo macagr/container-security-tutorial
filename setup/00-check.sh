@@ -39,22 +39,18 @@ else
 fi
 
 # --- 3. cgroup world -----------------------------------------------------
-# The core design decision of the lab (see setup/02-cgroup-mode.sh):
-#   tmpfs     = v1 -> release_agent escape WORKS
-#   cgroup2fs = v2 -> release_agent escape FAILS (the lesson, but we want
-#              attendees to see it succeed on v1 first: run 02-cgroup-mode.sh)
+# This lab branch assumes cgroup v2 (the modern default). v1 machines should
+# use the cgroup-v1 branch of the repository instead.
 hdr "Cgroup world"
 CG_TYPE=$(stat -fc %T /sys/fs/cgroup)
 case "$CG_TYPE" in
-    tmpfs)
-        ok "cgroup v1 hierarchy mounted — release_agent will work"
-        note "you can still demo the v2 failure: see act3/04-release_agent.sh"
-        ;;
     cgroup2fs)
-        warn "unified cgroup v2 (the modern default) — release_agent will FAIL"
-        note "expected on current Ubuntu; to see the v1 success first, run:"
-        note "    sudo setup/02-cgroup-mode.sh --set-v1   (requires ONE reboot)"
-        note "if you prefer to stay on v2, act3/04 will demo the failure only"
+        ok "unified cgroup v2 — matches this branch (act3/04: release_agent does not exist; that is the lesson)"
+        ;;
+    tmpfs)
+        warn "cgroup v1 hierarchy mounted — this branch assumes v2"
+        note "the act1/03 and act3/04 scripts on this branch will NOT work here"
+        note "use the cgroup-v1 branch of this repository instead"
         ;;
     *)
         bad "unrecognized mount type on /sys/fs/cgroup: $CG_TYPE"
