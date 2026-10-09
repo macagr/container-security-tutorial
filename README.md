@@ -72,7 +72,7 @@ residue checks and cleanup traps, check questions before moving on.
 Tested on: Ubuntu 24.04.5 LTS arm64, kernel 7.0.0-31-generic, cgroup v1
 (grub toggle applied via setup/02-cgroup-mode.sh).
 
-Two pin points remain for the author:
+Two pin points remain as TODOs:
 - `act5/02-kube-dementor.sh`: fill KDM_VERSION + KDM_INSTALL_CMD from the
   kube-dementor releases (separate repo); verify arm64 binary exists.
 - `act5/01-kind.sh`: re-pin K8S_NODE_VER when the lab is re-tested.
